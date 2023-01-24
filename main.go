@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -22,6 +23,9 @@ type RingIntBuffer struct {
 	mx    sync.RWMutex
 }
 
+var errlog = log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
+var inflog = log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
+
 // Интервал очистки кольцевого буфера
 const bufferDrainInterval = 10 * time.Second
 
@@ -31,6 +35,7 @@ const bufferSize int = 7
 func main() {
 
 	fmt.Println("Для заполнения буфера введите целые числа ...")
+	inflog.Println("Для заполнения буфера введите целые числа ...")
 
 	input := make(chan int)
 	done := make(chan bool)
@@ -52,6 +57,7 @@ func main() {
 
 		case data := <-bufferedIntCh:
 			fmt.Println("Получены данные: ... ", data)
+			inflog.Printf("Получены данные: %d", data)
 		case <-done:
 			return
 		}
@@ -104,12 +110,14 @@ func Read(nextStage chan<- int, done chan bool) {
 
 		if strings.EqualFold(data, "Выход") { // Пишем в консоли 'Выход' для завершения программы.
 			fmt.Print("\nПрограмма завершила работу!")
+			inflog.Print("\nПрограмма завершила работу!")
 			close(done)
 			return
 		}
 		i, err := strconv.Atoi(data)
 		if err != nil {
 			fmt.Print("Программа обрабатывает только целые числа.\n\n Или введите команду :\n  Выход \n")
+			errlog.Printf("Введены неверные данные: %v", data)
 			continue
 		}
 		nextStage <- i
@@ -124,6 +132,7 @@ func NegativeFiltrStageInt(previousStageCh <-chan int, nextStageCh chan<- int, d
 		case data := <-previousStageCh:
 			if data > 0 {
 				nextStageCh <- data
+				inflog.Printf("Данные %d прошли фильтр NegativeFiltrStageInt\n", data)
 			}
 		case <-done:
 			return
@@ -139,6 +148,7 @@ func NotDivadedThreeFunc(previusStageCh <-chan int, nextStageCh chan<- int, done
 		case data := <-previusStageCh:
 			if data%3 != 0 {
 				nextStageCh <- data
+				inflog.Printf("Данные %d прошли фильтр NotDivadedThreeFunc\n", data)
 			}
 		case <-done:
 			return
