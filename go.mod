@@ -1,3 +1,3 @@
-module module_26a.3.1
+module pipeline
 
 go 1.19
